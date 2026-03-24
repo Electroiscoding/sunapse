@@ -1,0 +1,355 @@
+{
+  "name": "synapse",
+  "displayName": "Synapse AI Coding Assistant",
+  "description": "Advanced AI coding assistant with multi-agent system, autonomous flows, and BYOM support",
+  "version": "1.0.0",
+  "publisher": "synapse-ai",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Programming Languages",
+    "Debuggers",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "copilot",
+    "assistant",
+    "code",
+    "agent",
+    "autonomous",
+    "synapse"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:synapse.openPanel",
+    "onView:synapse.panel"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "synapse.openPanel",
+        "title": "Open Synapse Panel",
+        "category": "Synapse",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "synapse.indexCodebase",
+        "title": "Index Codebase",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.clearIndex",
+        "title": "Clear Codebase Index",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.startCleft",
+        "title": "Start Cleft Autonomous Flow",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.stopCleft",
+        "title": "Stop Cleft Flow",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.switchModel",
+        "title": "Switch AI Model",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.addCustomAgent",
+        "title": "Add Custom Agent",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.createBackup",
+        "title": "Create Backup",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.restoreBackup",
+        "title": "Restore Backup",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.exportConversations",
+        "title": "Export Conversations",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.importConversations",
+        "title": "Import Conversations",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.clearConversations",
+        "title": "Clear Conversations",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.showHealth",
+        "title": "Show Health Status",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.showMetrics",
+        "title": "Show Metrics Dashboard",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.showLogs",
+        "title": "Show Logs",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.validateConfig",
+        "title": "Validate Configuration",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.showFeatureFlags",
+        "title": "Show Feature Flags",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.showPerformance",
+        "title": "Show Performance Report",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.emergencyKill",
+        "title": "Emergency Kill Switch",
+        "category": "Synapse"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "synapse.panel",
+          "name": "Synapse AI",
+          "when": "synapse:enabled",
+          "icon": "resources/synapse-icon.svg"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "synapse-sidebar",
+          "title": "Synapse",
+          "icon": "resources/synapse-icon.svg"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Synapse AI",
+      "properties": {
+        "synapse.provider": {
+          "type": "string",
+          "default": "openrouter",
+          "enum": [
+            "openrouter",
+            "huggingface",
+            "openai",
+            "anthropic",
+            "custom"
+          ],
+          "description": "AI provider for model inference"
+        },
+        "synapse.model": {
+          "type": "string",
+          "default": "anthropic/claude-3.5-sonnet",
+          "description": "Model identifier (e.g., anthropic/claude-3.5-sonnet)"
+        },
+        "synapse.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for the selected provider"
+        },
+        "synapse.customEndpoint": {
+          "type": "string",
+          "default": "",
+          "description": "Custom API endpoint URL (for custom provider)"
+        },
+        "synapse.maxTokens": {
+          "type": "number",
+          "default": 4096,
+          "description": "Maximum tokens per request"
+        },
+        "synapse.temperature": {
+          "type": "number",
+          "default": 0.7,
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Temperature for model responses"
+        },
+        "synapse.indexing.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic codebase indexing"
+        },
+        "synapse.indexing.excludePatterns": {
+          "type": "array",
+          "default": [
+            "**/node_modules/**",
+            "**/.git/**",
+            "**/dist/**",
+            "**/build/**",
+            "**/*.min.js",
+            "**/*.min.css"
+          ],
+          "description": "Patterns to exclude from indexing"
+        },
+        "synapse.cleft.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable autonomous terminal command execution"
+        },
+        "synapse.cleft.autoConfirm": {
+          "type": "boolean",
+          "default": false,
+          "description": "Auto-confirm terminal commands (dangerous)"
+        },
+        "synapse.agents.activeAgents": {
+          "type": "array",
+          "default": [
+            "coder",
+            "orchestrator"
+          ],
+          "description": "Active agent types"
+        },
+        "synapse.iteration.autoIterate": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable 24/7 auto-iteration mode"
+        },
+        "synapse.iteration.checkpointInterval": {
+          "type": "number",
+          "default": 300,
+          "description": "Checkpoint interval in seconds"
+        },
+        "synapse.telemetry.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable anonymous telemetry for feature usage and error reporting (no code content)"
+        },
+        "synapse.telemetry.debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show telemetry events in output channel for debugging"
+        },
+        "synapse.backup.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic daily backups"
+        },
+        "synapse.backup.maxBackups": {
+          "type": "number",
+          "default": 10,
+          "description": "Maximum number of backups to keep"
+        },
+        "synapse.cache.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable caching for API responses and file content"
+        },
+        "synapse.cache.maxSize": {
+          "type": "number",
+          "default": 1000,
+          "description": "Maximum number of cached items"
+        },
+        "synapse.cache.defaultTTL": {
+          "type": "number",
+          "default": 300,
+          "description": "Default cache TTL in seconds"
+        },
+        "synapse.logLevel": {
+          "type": "string",
+          "default": "info",
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error",
+            "fatal"
+          ],
+          "description": "Log level for Synapse output"
+        },
+        "synapse.healthCheck.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable periodic health checks"
+        },
+        "synapse.rateLimit.api.maxRequests": {
+          "type": "number",
+          "default": 50,
+          "description": "Maximum API requests per minute"
+        },
+        "synapse.featureFlags.showIndicator": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show feature flag status in status bar"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "synapse.openPanel",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a"
+      },
+      {
+        "command": "synapse.startCleft",
+        "key": "ctrl+shift+c",
+        "mac": "cmd+shift+c"
+      },
+      {
+        "command": "synapse.indexCodebase",
+        "key": "ctrl+shift+i",
+        "mac": "cmd+shift+i"
+      },
+      {
+        "command": "synapse.switchModel",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "20.x",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "css-loader": "^6.8.1",
+    "eslint": "^8.45.0",
+    "style-loader": "^3.3.3",
+    "ts-loader": "^9.4.4",
+    "typescript": "^5.1.6",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "vectra": "^0.4.4",
+    "tiktoken": "^1.0.10",
+    "glob": "^10.3.3",
+    "minimatch": "^9.0.3",
+    "zod": "^3.22.4"
+  }
+}
