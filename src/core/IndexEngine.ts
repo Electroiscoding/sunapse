@@ -6,7 +6,7 @@ import { MetricsCollector, Metrics } from '../metrics/MetricsCollector';
 import { PerformanceProfiler } from './PerformanceProfiler';
 import { apiRateLimiter } from './RateLimiter';
 import { indexingCircuitBreaker } from './CircuitBreaker';
-import { fileCache } from './CacheManager';
+import { CacheManager, apiCache, fileCache, indexCache } from './CacheManager';
 
 /**
  * IndexEngine - Production-grade indexing system
@@ -197,7 +197,7 @@ export class IndexEngine {
                 };
 
                 this.indexData.set(filePath, entry);
-                fileCache.set(`index:${filePath}`, entry, 3600000); // 1 hour TTL
+                indexCache.set(`index:${filePath}`, entry, 3600000); // 1 hour TTL
 
                 this.metrics.counter(Metrics.FILES_INDEXED, 1, { language });
 
@@ -220,7 +220,7 @@ export class IndexEngine {
      */
     async removeFromIndex(filePath: string): Promise<void> {
         this.indexData.delete(filePath);
-        fileCache.delete(`index:${filePath}`);
+        indexCache.delete(`index:${filePath}`);
         this.log.info(`Removed ${filePath} from index`);
         await this.saveIndexToStorage();
     }
@@ -228,12 +228,12 @@ export class IndexEngine {
     /**
      * Search the index
      */
-    search(query: string, options: { 
-        fileTypes?: string[]; 
+    async search(query: string, options: {
+        fileTypes?: string[];
         maxResults?: number;
         includeSymbols?: boolean;
-    } = {}): Array<{ entry: IndexEntry; score: number; matches: string[] }> {
-        return this.profiler.profile('index_search', () => {
+    } = {}): Promise<Array<{ entry: IndexEntry; score: number; matches: string[] }>> {
+        return await this.profiler.profile('index_search', async () => {
             const results: Array<{ entry: IndexEntry; score: number; matches: string[] }> = [];
             const maxResults = options.maxResults || 50;
             const queryLower = query.toLowerCase();
@@ -295,8 +295,8 @@ export class IndexEngine {
         return {
             totalFiles: this.indexData.size,
             totalSize,
-            lastFullIndex: this.stateManager.get<number>('lastFullIndex', 0),
-            lastIncrementalIndex: this.stateManager.get<number>('lastIncrementalIndex', 0),
+            lastFullIndex: this.stateManager.get<number>('lastFullIndex', 0) || 0,
+            lastIncrementalIndex: this.stateManager.get<number>('lastIncrementalIndex', 0) || 0,
             version: this.indexVersion,
             status: this.status,
             errors: this.errorLog.slice(-10) // Last 10 errors
@@ -352,8 +352,8 @@ export class IndexEngine {
      */
     getEntry(filePath: string): IndexEntry | undefined {
         // Check cache first
-        const cached = fileCache.get<IndexEntry>(`index:${filePath}`);
-        if (cached) return cached;
+        const cached = indexCache.get(`index:${filePath}`);
+        if (cached) return cached as IndexEntry;
 
         return this.indexData.get(filePath);
     }
@@ -374,7 +374,7 @@ export class IndexEngine {
         const reportProgress = (phase: IndexProgress['phase'], currentFile?: string) => {
             processed++;
             const percentage = Math.round((processed / total) * 100);
-            
+
             const progress: IndexProgress = {
                 phase,
                 current: processed,
@@ -392,7 +392,7 @@ export class IndexEngine {
 
         // Process files in batches for better performance
         const batchSize = options.parallelWorkers || 5;
-        
+
         for (let i = 0; i < files.length; i += batchSize) {
             // Check cancellation
             if (options.cancellationToken?.isCancellationRequested) {
@@ -401,7 +401,7 @@ export class IndexEngine {
             }
 
             const batch = files.slice(i, i + batchSize);
-            
+
             await Promise.all(batch.map(async file => {
                 await this.indexFile(file);
                 reportProgress('processing', file);
@@ -433,7 +433,7 @@ export class IndexEngine {
         for (const folder of vscode.workspace.workspaceFolders) {
             const pattern = new vscode.RelativePattern(folder, '**/*');
             const uris = await vscode.workspace.findFiles(pattern, `{${excludePatterns.join(',')}}`);
-            
+
             for (const uri of uris) {
                 if (this.shouldIndexFile(uri.fsPath)) {
                     files.push(uri.fsPath);
@@ -483,7 +483,7 @@ export class IndexEngine {
 
     private parseTypeScript(content: string): SymbolInfo[] {
         const symbols: SymbolInfo[] = [];
-        
+
         // Simple regex-based parsing for production
         const patterns = [
             { regex: /(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(/g, type: 'function' as const },
@@ -516,7 +516,7 @@ export class IndexEngine {
 
     private parsePython(content: string): SymbolInfo[] {
         const symbols: SymbolInfo[] = [];
-        
+
         const patterns = [
             { regex: /(?:async\s+)?def\s+(\w+)\s*\(/g, type: 'function' as const },
             { regex: /class\s+(\w+)/g, type: 'class' as const }
@@ -539,7 +539,7 @@ export class IndexEngine {
 
     private extractImports(content: string, language: string): string[] {
         const imports: string[] = [];
-        
+
         if (language === 'typescript' || language === 'javascript') {
             const regex = /import\s+(?:(?:\{[^}]*\}|[^'"]*)\s+from\s+)?['"]([^'"]+)['"]/g;
             let match;
@@ -547,13 +547,13 @@ export class IndexEngine {
                 imports.push(match[1]);
             }
         }
-        
+
         return imports;
     }
 
     private extractExports(content: string, language: string): string[] {
         const exports: string[] = [];
-        
+
         if (language === 'typescript' || language === 'javascript') {
             const regex = /export\s+(?:default\s+)?(?:class|function|const|let|var|interface|type|enum)?\s*(\w+)/g;
             let match;
@@ -561,7 +561,7 @@ export class IndexEngine {
                 exports.push(match[1]);
             }
         }
-        
+
         return exports;
     }
 

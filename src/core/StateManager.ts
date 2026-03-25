@@ -14,7 +14,7 @@ export class StateManager {
 
     // Global state - persists across sessions
     get<T>(key: string, defaultValue?: T): T | undefined {
-        return this.globalState.get<T>(key, defaultValue);
+        return (this.globalState as any).get(key, defaultValue);
     }
 
     async set(key: string, value: any): Promise<void> {
@@ -102,7 +102,7 @@ export class StateManager {
 
     // Workspace-specific state
     getWorkspaceState<T>(key: string, defaultValue?: T): T | undefined {
-        return this.workspaceState.get<T>(key, defaultValue);
+        return (this.workspaceState as any).get(key, defaultValue);
     }
 
     async setWorkspaceState(key: string, value: any): Promise<void> {

@@ -1,7 +1,11 @@
 // This file is required by the test runner
 
 import * as path from 'path';
-import { runTests } from '@vscode/test-electron';
+
+declare const require: any;
+
+// Use require for optional dependency
+const { runTests } = require('@vscode/test-electron');
 
 async function main() {
     try {

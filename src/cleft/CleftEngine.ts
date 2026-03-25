@@ -27,7 +27,7 @@ export class CleftEngine {
 
     async start(): Promise<void> {
         const config = vscode.workspace.getConfiguration('synapse');
-        
+
         if (!config.get<boolean>('cleft.enabled', false)) {
             const enable = await vscode.window.showWarningMessage(
                 'Cleft autonomous commands are disabled. Enable?',
@@ -43,9 +43,9 @@ export class CleftEngine {
         this.isRunning = true;
         this.outputChannel.show();
         this.outputChannel.appendLine('[Cleft] Autonomous flow started');
-        
+
         // Get or create terminal
-        this.terminal = vscode.window.activeTerminal;
+        this.terminal = vscode.window.activeTerminal ?? null;
         if (!this.terminal) {
             this.terminal = vscode.window.createTerminal('Cleft');
         }
@@ -53,7 +53,7 @@ export class CleftEngine {
 
         // Save state
         await this.stateManager.set('cleftRunning', true);
-        
+
         vscode.window.showInformationMessage('Cleft autonomous flow started');
     }
 
@@ -61,10 +61,10 @@ export class CleftEngine {
         this.isRunning = false;
         this.currentTask = null;
         this.taskQueue = [];
-        
+
         this.outputChannel.appendLine('[Cleft] Autonomous flow stopped');
         await this.stateManager.set('cleftRunning', false);
-        
+
         vscode.window.showInformationMessage('Cleft flow stopped');
     }
 
@@ -75,7 +75,7 @@ export class CleftEngine {
     }): Promise<{ success: boolean; output: string; error?: string }> {
         const config = vscode.workspace.getConfiguration('synapse');
         const autoConfirm = options?.autoConfirm ?? config.get<boolean>('cleft.autoConfirm', false);
-        
+
         // Create task
         const task: CleftTask = {
             id: Date.now().toString(),
@@ -95,7 +95,7 @@ export class CleftEngine {
                 'Skip',
                 'Stop Cleft'
             );
-            
+
             switch (choice) {
                 case 'Stop Cleft':
                     await this.stop();
@@ -111,25 +111,25 @@ export class CleftEngine {
         // Execute
         task.status = 'running';
         this.currentTask = task;
-        
+
         this.outputChannel.appendLine(`[Cleft] Executing: ${command}`);
-        
+
         try {
             const result = await this.runInTerminal(command, options?.timeout);
-            
+
             task.status = 'completed';
             task.result = result;
-            
+
             this.outputChannel.appendLine(`[Cleft] Completed: ${command}`);
-            
+
             return { success: true, output: result };
-            
+
         } catch (error) {
             task.status = 'failed';
             const errorMsg = (error as Error).message;
-            
+
             this.outputChannel.appendLine(`[Cleft] Failed: ${command} - ${errorMsg}`);
-            
+
             return { success: false, output: '', error: errorMsg };
         }
     }
@@ -161,7 +161,7 @@ export class CleftEngine {
                     if (e.execution === execution) {
                         clearTimeout(timeoutId);
                         disposable.dispose();
-                        
+
                         if (e.exitCode === 0) {
                             resolve(output);
                         } else {
@@ -182,31 +182,31 @@ export class CleftEngine {
     }): Promise<{ completed: string[]; failed: string[] }> {
         const completed: string[] = [];
         const failed: string[] = [];
-        
+
         for (const task of tasks) {
             if (!this.isRunning) break;
-            
+
             const result = await this.executeCommand(task);
-            
+
             if (result.success) {
                 completed.push(task);
             } else {
                 failed.push(task);
-                
+
                 if (options?.stopOnFailure !== false) {
                     const continueExec = await vscode.window.showWarningMessage(
                         `Task failed: ${task}`,
                         'Continue',
                         'Stop'
                     );
-                    
+
                     if (continueExec === 'Stop') {
                         break;
                     }
                 }
             }
         }
-        
+
         return { completed, failed };
     }
 
@@ -216,28 +216,28 @@ export class CleftEngine {
         validate?: string;
     }>): Promise<boolean> {
         this.outputChannel.appendLine(`[Cleft] Starting flow: ${flowName}`);
-        
+
         for (const step of steps) {
             if (!this.isRunning) return false;
-            
+
             this.outputChannel.appendLine(`[Cleft] Step: ${step.name}`);
-            
+
             // Execute step
             const result = await this.executeCommand(step.command);
-            
+
             if (!result.success) {
                 this.outputChannel.appendLine(`[Cleft] Step failed: ${step.name}`);
-                
+
                 if (step.validate) {
                     // Try validation/recovery command
                     this.outputChannel.appendLine(`[Cleft] Running validation: ${step.validate}`);
                     await this.executeCommand(step.validate);
                 }
-                
+
                 return false;
             }
         }
-        
+
         this.outputChannel.appendLine(`[Cleft] Flow completed: ${flowName}`);
         return true;
     }

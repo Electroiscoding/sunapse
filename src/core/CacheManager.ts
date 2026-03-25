@@ -220,6 +220,12 @@ export const fileCache = new CacheManager<string>({
     defaultTtl: 30 * 1000 // 30 seconds
 });
 
+// Index entry cache
+export const indexCache = new CacheManager<any>({
+    maxSize: 1000,
+    defaultTtl: 60 * 60 * 1000 // 1 hour
+});
+
 // Index search results cache
 export const searchCache = new CacheManager<any[]>({
     maxSize: 100,

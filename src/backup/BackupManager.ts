@@ -42,7 +42,7 @@ export class BackupManager {
     async createBackup(): Promise<string> {
         const startTime = Date.now();
         const backupId = `backup_${Date.now()}`;
-        
+
         try {
             // Collect all data
             const data = {
@@ -58,7 +58,7 @@ export class BackupManager {
 
             // Save to file
             const backupUri = await this.saveBackupFile(backupId, data);
-            
+
             // Create manifest
             const manifest: BackupManifest = {
                 id: backupId,
@@ -84,7 +84,7 @@ export class BackupManager {
             });
 
             this.outputChannel.appendLine(`[Backup] Created: ${backupId} (${(manifest.size / 1024).toFixed(2)} KB)`);
-            
+
             return backupId;
         } catch (error) {
             this.outputChannel.appendLine(`[Backup Error] ${error}`);
@@ -97,11 +97,11 @@ export class BackupManager {
      */
     async restoreBackup(backupId: string): Promise<boolean> {
         const startTime = Date.now();
-        
+
         try {
             // Load backup data
             const data = await this.loadBackupFile(backupId);
-            
+
             if (!data) {
                 throw new Error(`Backup ${backupId} not found`);
             }
@@ -164,8 +164,8 @@ export class BackupManager {
      * List all available backups
      */
     async listBackups(): Promise<BackupManifest[]> {
-        const manifests = this.stateManager.get<BackupManifest[]>('backupManifests', []);
-        
+        const manifests = this.stateManager.get<BackupManifest[]>('backupManifests', []) || [];
+
         // Sort by timestamp (newest first)
         return manifests.sort((a, b) => b.timestamp - a.timestamp);
     }
@@ -175,7 +175,7 @@ export class BackupManager {
      */
     async deleteBackup(backupId: string): Promise<void> {
         // Remove manifest
-        const manifests = this.stateManager.get<BackupManifest[]>('backupManifests', []);
+        const manifests = this.stateManager.get<BackupManifest[]>('backupManifests', []) || [];
         const updated = manifests.filter(m => m.id !== backupId);
         await this.stateManager.set('backupManifests', updated);
 
@@ -237,7 +237,7 @@ export class BackupManager {
         try {
             const data = await vscode.workspace.fs.readFile(uris[0]);
             const backup = JSON.parse(data.toString());
-            
+
             // Validate backup format
             if (!backup.version || !backup.timestamp) {
                 throw new Error('Invalid backup format');
@@ -265,12 +265,12 @@ export class BackupManager {
         }
 
         const intervalMs = intervalHours * 60 * 60 * 1000;
-        
+
         this.autoBackupInterval = setInterval(async () => {
             try {
                 await this.createBackup();
                 this.outputChannel.appendLine('[Auto Backup] Created successfully');
-                
+
                 // Cleanup old backups (keep last 10)
                 await this.cleanupOldBackups(10);
             } catch (error) {
@@ -297,11 +297,11 @@ export class BackupManager {
      */
     private async cleanupOldBackups(keepCount: number): Promise<void> {
         const manifests = await this.listBackups();
-        
+
         if (manifests.length <= keepCount) return;
 
         const toDelete = manifests.slice(keepCount);
-        
+
         for (const manifest of toDelete) {
             await this.deleteBackup(manifest.id);
         }
@@ -311,7 +311,7 @@ export class BackupManager {
 
     private async saveBackupFile(backupId: string, data: any): Promise<vscode.Uri> {
         const backupDir = this.getBackupDir();
-        
+
         // Ensure directory exists
         try {
             await vscode.workspace.fs.createDirectory(vscode.Uri.file(backupDir));
@@ -321,7 +321,7 @@ export class BackupManager {
 
         const backupPath = path.join(backupDir, `${backupId}.json`);
         const uri = vscode.Uri.file(backupPath);
-        
+
         await vscode.workspace.fs.writeFile(
             uri,
             Buffer.from(JSON.stringify(data, null, 2))
@@ -345,9 +345,9 @@ export class BackupManager {
     }
 
     private async storeManifest(manifest: BackupManifest): Promise<void> {
-        const manifests = this.stateManager.get<BackupManifest[]>('backupManifests', []);
+        const manifests = this.stateManager.get<BackupManifest[]>('backupManifests', []) || [];
         manifests.unshift(manifest);
-        
+
         // Keep only last 50 manifests
         if (manifests.length > 50) {
             manifests.pop();
@@ -370,7 +370,7 @@ export class BackupManager {
 
     private async restoreSettings(settings: Record<string, any>): Promise<void> {
         const config = vscode.workspace.getConfiguration('synapse');
-        
+
         for (const [key, value] of Object.entries(settings)) {
             if (value !== undefined) {
                 await config.update(key, value, true);

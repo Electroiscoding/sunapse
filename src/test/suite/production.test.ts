@@ -116,7 +116,7 @@ suite('Production Systems Integration Tests', () => {
 
             await limiter.checkLimit('user1');
             await limiter.checkLimit('user1');
-            
+
             const allowed = await limiter.checkLimit('user1');
             assert.strictEqual(allowed, false);
         });
@@ -139,35 +139,35 @@ suite('Production Systems Integration Tests', () => {
     suite('Cache Manager', () => {
         test('should store and retrieve values', () => {
             const cache = new CacheManager<string>({ maxSize: 100 });
-            
+
             cache.set('key1', 'value1');
             const value = cache.get('key1');
-            
+
             assert.strictEqual(value, 'value1');
         });
 
         test('should respect TTL', async () => {
-            const cache = new CacheManager<string>({ defaultTTL: 50 });
-            
+            const cache = new CacheManager<string>({ defaultTtl: 50 });
+
             cache.set('key1', 'value1', 50);
-            
+
             // Should exist immediately
             assert.strictEqual(cache.get('key1'), 'value1');
-            
+
             // Wait for expiration
             await new Promise(resolve => setTimeout(resolve, 100));
-            
+
             // Should be expired
             assert.strictEqual(cache.get('key1'), undefined);
         });
 
         test('should enforce max size with LRU eviction', () => {
             const cache = new CacheManager<string>({ maxSize: 2 });
-            
+
             cache.set('key1', 'value1');
             cache.set('key2', 'value2');
             cache.set('key3', 'value3');
-            
+
             // key1 should be evicted
             assert.strictEqual(cache.get('key1'), undefined);
             assert.strictEqual(cache.get('key2'), 'value2');
@@ -176,12 +176,12 @@ suite('Production Systems Integration Tests', () => {
 
         test('should track stats', () => {
             const cache = new CacheManager<string>({ maxSize: 100 });
-            
+
             cache.set('key1', 'value1');
             cache.get('key1');
             cache.get('key1');
             cache.get('nonexistent');
-            
+
             const stats = cache.getStats();
             assert.strictEqual(stats.size, 1);
             assert.strictEqual(stats.hits, 2);
@@ -195,7 +195,7 @@ suite('Production Systems Integration Tests', () => {
             flags.initialize(stateManager, 'test-user');
 
             await flags.setEnabled('test-flag', true);
-            
+
             const isEnabled = flags.isEnabled('test-flag');
             assert.strictEqual(isEnabled, true);
         });
@@ -205,7 +205,7 @@ suite('Production Systems Integration Tests', () => {
             flags.initialize(stateManager, 'test-user-123');
 
             await flags.setRolloutPercentage('rollout-flag', 50);
-            
+
             const isEnabled = flags.isEnabled('rollout-flag');
             // Should be deterministic based on user ID hash
             assert.strictEqual(typeof isEnabled, 'boolean');
@@ -219,7 +219,7 @@ suite('Production Systems Integration Tests', () => {
             assert.strictEqual(flags.isEnabled('killswitch-flag'), true);
 
             await flags.emergencyKill();
-            
+
             assert.strictEqual(flags.isEnabled('killswitch-flag'), false);
         });
     });
@@ -227,20 +227,20 @@ suite('Production Systems Integration Tests', () => {
     suite('Error Handler', () => {
         test('should execute successful operations', async () => {
             const handler = ErrorHandler.getInstance();
-            
+
             const result = await handler.executeWithRecovery(
                 async () => 'success',
                 { component: 'Test', operation: 'test' },
                 'retry'
             );
-            
+
             assert.strictEqual(result, 'success');
         });
 
         test('should retry failed operations', async () => {
             const handler = ErrorHandler.getInstance();
             let attempts = 0;
-            
+
             const result = await handler.executeWithRecovery(
                 async () => {
                     attempts++;
@@ -252,7 +252,7 @@ suite('Production Systems Integration Tests', () => {
                 { component: 'Test', operation: 'test' },
                 'retry'
             );
-            
+
             assert.strictEqual(result, 'success');
             assert.strictEqual(attempts, 2);
         });
@@ -261,20 +261,21 @@ suite('Production Systems Integration Tests', () => {
     suite('Health Monitor', () => {
         test('should report health status', async () => {
             const monitor = HealthMonitor.getInstance();
-            
+
             const status = await monitor.checkAll();
-            
+
             assert.ok(status.overall === 'healthy' || status.overall === 'degraded' || status.overall === 'unhealthy');
             assert.ok(Array.isArray(status.checks));
         });
 
         test('should track memory usage', () => {
             const monitor = HealthMonitor.getInstance();
-            
-            const memory = monitor.checkMemory();
-            
-            assert.ok(memory.heapUsed > 0);
-            assert.ok(memory.heapTotal > 0);
+
+            const metrics = monitor.getMetrics();
+
+            assert.ok(metrics.memory !== null);
+            assert.ok(metrics.memory!.heapUsed > 0);
+            assert.ok(metrics.memory!.heapTotal > 0);
         });
     });
 });

@@ -39,7 +39,7 @@ export class MigrationManager {
                 description: 'v1.0 release - migrate conversation format',
                 migrate: async (sm) => {
                     const conversations = sm.getConversationHistory();
-                    
+
                     // Add message IDs if missing
                     const migrated = conversations.map((conv: any) => ({
                         ...conv,
@@ -66,12 +66,12 @@ export class MigrationManager {
 
         for (const migration of this.migrations) {
             // Check if this migration needs to run
-            if (this.compareVersions(currentVersion, migration.version) < 0) {
+            if (this.compareVersions(currentVersion || '0.0.0', migration.version) < 0) {
                 console.log(`[Migration] Running: ${migration.version} - ${migration.description}`);
-                
+
                 try {
                     const success = await migration.migrate(this.stateManager);
-                    
+
                     if (success) {
                         migrated.push(migration.version);
                         console.log(`[Migration] Success: ${migration.version}`);
@@ -118,7 +118,7 @@ export class MigrationManager {
      * Get current schema version
      */
     getCurrentVersion(): string {
-        return this.stateManager.get<string>('schemaVersion', '0.0.0');
+        return this.stateManager.get<string>('schemaVersion', '0.0.0') || '0.0.0';
     }
 
     /**

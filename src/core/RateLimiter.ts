@@ -49,7 +49,7 @@ export class RateLimiter {
 
         // Check if within limit
         const totalAllowed = this.config.maxRequests + (this.config.burstAllowance || 0);
-        
+
         if (entry.count < this.config.maxRequests) {
             entry.count++;
             return {
@@ -89,6 +89,13 @@ export class RateLimiter {
         }
     }
 
+    /**
+     * Check if request would be allowed (alias for tryAcquire)
+     */
+    checkLimit(key: string): boolean {
+        const result = this.tryAcquire(key);
+        return result.allowed;
+    }
     /**
      * Execute with rate limiting
      */

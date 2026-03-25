@@ -142,10 +142,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
     } catch (error) {
         const errorHandler = ErrorHandler.getInstance();
-        errorHandler.handleError(
+        errorHandler.logError(
             error as Error,
-            ErrorSeverity.FATAL,
-            { component: 'Extension', operation: 'activate' }
+            { component: 'Extension', operation: 'activate' },
+            0
         );
         throw error;
     }

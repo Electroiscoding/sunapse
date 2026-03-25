@@ -46,12 +46,12 @@ export class MetricsCollector {
     gauge(name: string, value: number, labels?: Record<string, string>): void {
         const values = this.gauges.get(name) || [];
         values.push({ timestamp: Date.now(), value, labels });
-        
+
         // Keep only last 1000 values
         if (values.length > 1000) {
             values.shift();
         }
-        
+
         this.gauges.set(name, values);
     }
 
@@ -61,12 +61,12 @@ export class MetricsCollector {
     histogram(name: string, value: number): void {
         const values = this.histograms.get(name) || [];
         values.push(value);
-        
+
         // Keep only last 1000 values
         if (values.length > 1000) {
             values.shift();
         }
-        
+
         this.histograms.set(name, values);
     }
 
@@ -101,7 +101,7 @@ export class MetricsCollector {
         max: number;
     } {
         const values = this.gauges.get(name) || [];
-        
+
         if (values.length === 0) {
             return { current: null, avg: 0, min: 0, max: 0 };
         }
@@ -127,13 +127,13 @@ export class MetricsCollector {
         count: number;
     } {
         const values = this.histograms.get(name) || [];
-        
+
         if (values.length === 0) {
             return { p50: 0, p95: 0, p99: 0, count: 0 };
         }
 
         const sorted = [...values].sort((a, b) => a - b);
-        
+
         return {
             p50: this.percentile(sorted, 0.5),
             p95: this.percentile(sorted, 0.95),
@@ -175,7 +175,7 @@ export class MetricsCollector {
      */
     private reportMetrics(): void {
         this.outputChannel.appendLine(`\n[${new Date().toISOString()}] Metrics Report`);
-        this.outputChannel.appendLine('=' .repeat(50));
+        this.outputChannel.appendLine('='.repeat(50));
 
         // Report counters
         this.outputChannel.appendLine('\nCounters:');
@@ -292,6 +292,8 @@ export const Metrics = {
     INDEX_FILES: 'index_files_total',
     INDEX_DURATION: 'index_duration_ms',
     INDEX_SIZE: 'index_size_bytes',
+    INDEXING_OPERATIONS: 'indexing_operations_total',
+    FILES_INDEXED: 'files_indexed_total',
 
     // Agent metrics
     AGENT_RUNS: 'agent_runs_total',

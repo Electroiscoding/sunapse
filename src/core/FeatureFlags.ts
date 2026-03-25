@@ -262,7 +262,7 @@ export class FeatureFlagManager {
      */
     private loadPersistedFlags(): void {
         if (this.stateManager) {
-            const data = this.stateManager.get<[string, FeatureFlag][]>('featureFlags', []);
+            const data = this.stateManager.get<[string, FeatureFlag][]>('featureFlags', []) || [];
             for (const [name, flag] of data) {
                 this.flags.set(name, flag);
             }

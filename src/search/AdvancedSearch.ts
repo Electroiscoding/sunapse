@@ -42,7 +42,7 @@ export class AdvancedSearch {
         try {
             // Build search pattern
             let searchPattern = query;
-            
+
             if (options.regex) {
                 // Validate regex
                 try {
@@ -63,7 +63,7 @@ export class AdvancedSearch {
             }
 
             // Build VS Code search options
-            const searchOptions: vscode.FindTextInFilesOptions = {
+            const searchOptions: any = {
                 useDefaultExcludes: true,
                 useIgnoreFiles: true
             };
@@ -78,7 +78,7 @@ export class AdvancedSearch {
                 options.filePattern || '**/*'
             );
 
-            const matches = await vscode.workspace.findTextInFiles(
+            const matches = await (vscode.workspace as any).findTextInFiles(
                 { pattern: searchPattern, isRegExp: true },
                 searchOptions
             );
@@ -86,7 +86,7 @@ export class AdvancedSearch {
             // Process results
             for (const match of matches) {
                 const lines = match.preview.text.split('\n');
-                
+
                 results.push({
                     file: match.uri.fsPath,
                     line: match.range.start.line,
@@ -145,7 +145,7 @@ export class AdvancedSearch {
     private calculateFuzzyScore(query: string, text: string): number {
         const queryLower = query.toLowerCase();
         const textLower = text.toLowerCase();
-        
+
         // Exact match gets highest score
         if (textLower.includes(queryLower)) {
             return 100;
@@ -154,7 +154,7 @@ export class AdvancedSearch {
         // Check for fuzzy match
         let score = 0;
         let lastIndex = 0;
-        
+
         for (const char of queryLower) {
             const index = textLower.indexOf(char, lastIndex);
             if (index !== -1) {
@@ -243,15 +243,15 @@ export class AdvancedSearch {
             // Open file at location
             const doc = await vscode.workspace.openTextDocument(selected.result.file);
             const editor = await vscode.window.showTextDocument(doc);
-            
+
             const position = new vscode.Position(
                 selected.result.line,
                 selected.result.column
             );
-            
+
             editor.selection = new vscode.Selection(position, position);
             editor.revealRange(new vscode.Range(position, position));
-            
+
             return selected.result;
         }
 
