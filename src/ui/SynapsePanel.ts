@@ -1,10 +1,13 @@
 import * as vscode from 'vscode';
 import { ProviderManager } from '../providers/ProviderManager';
 import { AgentOrchestrator } from '../agents/AgentOrchestrator';
+import { AgentExecutor } from '../agents/AgentExecutor';
+import { ToolRegistry } from '../agents/ToolRegistry';
 import { CodebaseIndex } from '../indexing/CodebaseIndex';
 import { CleftEngine } from '../cleft/CleftEngine';
 import { StateManager } from '../core/StateManager';
 import { IterationEngine } from '../core/IterationEngine';
+import { getComponentLogger } from '../logging/Logger';
 
 export class SynapsePanel {
     public static currentPanel: SynapsePanel | undefined;
@@ -16,6 +19,10 @@ export class SynapsePanel {
     private cleftEngine: CleftEngine;
     private stateManager: StateManager;
     private iterationEngine: IterationEngine;
+    private agentExecutor: AgentExecutor;
+    private toolRegistry: ToolRegistry;
+    private log = getComponentLogger('SynapsePanel');
+    private isAgentMode: boolean = true;
 
     constructor(
         context: vscode.ExtensionContext,
@@ -32,6 +39,11 @@ export class SynapsePanel {
         this.cleftEngine = cleftEngine;
         this.stateManager = stateManager;
         this.iterationEngine = iterationEngine;
+
+        // Initialize agentic system
+        this.toolRegistry = new ToolRegistry(this.cleftEngine, this.codebaseIndex);
+        this.agentExecutor = new AgentExecutor(this.toolRegistry, this.providerManager);
+        this.log.info('SynapsePanel initialized with agentic capabilities');
 
         this._panel = vscode.window.createWebviewPanel(
             'synapse',
@@ -175,33 +187,46 @@ export class SynapsePanel {
             content
         });
 
-        // Get relevant context from codebase index
-        const relevantFiles = await this.codebaseIndex.search(content, 5);
-        
-        // Get current file context
-        const codeContext = await this._getCodeContext();
+        this._panel.webview.postMessage({ type: 'responseStart' });
 
-        // Build system prompt with agent capabilities
-        const systemPrompt = this.agentOrchestrator.getSystemPrompt(codeContext, relevantFiles);
-
-        // Stream response
-        const messages = [
-            { role: 'system', content: systemPrompt },
-            ...this.stateManager.getConversationHistory().slice(-20),
-            { role: 'user', content }
-        ];
-
-        let fullResponse = '';
-        
         try {
-            this._panel.webview.postMessage({ type: 'responseStart' });
-            
-            for await (const chunk of this.providerManager.streamCompletion(messages, options)) {
-                fullResponse += chunk;
-                this._panel.webview.postMessage({
-                    type: 'responseChunk',
-                    chunk
+            let fullResponse = '';
+
+            if (this.isAgentMode) {
+                // AGENTIC MODE: Use ReAct loop with tools
+                this.log.info('Starting agentic execution', { request: content });
+
+                fullResponse = await this.agentExecutor.execute(content, (step) => {
+                    // Send step updates to webview for real-time display
+                    this._panel.webview.postMessage({
+                        type: 'agentStep',
+                        step: {
+                            type: step.type,
+                            content: step.content,
+                            toolCall: step.toolCall,
+                            toolResult: step.toolResult
+                        }
+                    });
                 });
+            } else {
+                // CHAT MODE: Standard streaming response
+                const relevantFiles = await this.codebaseIndex.search(content, 5);
+                const codeContext = await this._getCodeContext();
+                const systemPrompt = this.agentOrchestrator.getSystemPrompt(codeContext, relevantFiles);
+
+                const messages = [
+                    { role: 'system', content: systemPrompt },
+                    ...this.stateManager.getConversationHistory().slice(-20),
+                    { role: 'user', content }
+                ];
+
+                for await (const chunk of this.providerManager.streamCompletion(messages, options)) {
+                    fullResponse += chunk;
+                    this._panel.webview.postMessage({
+                        type: 'responseChunk',
+                        chunk
+                    });
+                }
             }
 
             this._panel.webview.postMessage({ type: 'responseComplete' });
@@ -212,14 +237,8 @@ export class SynapsePanel {
                 content: fullResponse
             });
 
-            // Process any actions from the response
-            await this.agentOrchestrator.processResponse(fullResponse, {
-                onEdit: (edit: any) => this._panel.webview.postMessage({ type: 'suggestedEdit', edit }),
-                onTerminal: (cmd: string) => this._panel.webview.postMessage({ type: 'suggestedCommand', cmd }),
-                onFile: (file: any) => this._panel.webview.postMessage({ type: 'suggestedFile', file })
-            });
-
         } catch (error) {
+            this.log.error('Message handling failed', { error: (error as Error).message });
             this._panel.webview.postMessage({
                 type: 'error',
                 error: (error as Error).message
@@ -235,7 +254,7 @@ export class SynapsePanel {
 
         const document = editor.document;
         const selection = editor.selection;
-        
+
         return {
             filePath: document.fileName,
             language: document.languageId,
@@ -251,10 +270,10 @@ export class SynapsePanel {
 
     private async _applyEdit(filePath: string, content: string, range?: any): Promise<void> {
         const uri = vscode.Uri.file(filePath);
-        
+
         try {
             let document: vscode.TextDocument;
-            
+
             try {
                 document = await vscode.workspace.openTextDocument(uri);
             } catch {
@@ -266,7 +285,7 @@ export class SynapsePanel {
             }
 
             const editor = await vscode.window.showTextDocument(document);
-            
+
             if (range) {
                 // Replace specific range
                 const vscodeRange = new vscode.Range(
@@ -292,7 +311,7 @@ export class SynapsePanel {
             }
 
             await document.save();
-            
+
             this._panel.webview.postMessage({
                 type: 'editApplied',
                 filePath
@@ -309,7 +328,7 @@ export class SynapsePanel {
         const terminal = vscode.window.activeTerminal || vscode.window.createTerminal('Synapse');
         terminal.show();
         terminal.sendText(command);
-        
+
         this._panel.webview.postMessage({
             type: 'terminalExecuted',
             command
@@ -319,7 +338,7 @@ export class SynapsePanel {
     private _getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.Uri): string {
         const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'styles.css'));
         const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'main.js'));
-        
+
         const nonce = this._getNonce();
 
         return `<!DOCTYPE html>

@@ -1,6 +1,6 @@
 import { getComponentLogger } from '../logging/Logger';
 import { MetricsCollector } from '../metrics/MetricsCollector';
-import { CircuitBreaker } from './CircuitBreaker';
+import { CircuitBreaker, CircuitState } from './CircuitBreaker';
 import { apiRateLimiter } from './RateLimiter';
 
 /**
@@ -82,7 +82,7 @@ export class RetryMiddleware {
 
             try {
                 // Check circuit breaker if configured
-                if (this.config.circuitBreaker?.getState() === 'open') {
+                if (this.config.circuitBreaker?.getState() === CircuitState.OPEN) {
                     throw new Error('Circuit breaker is open');
                 }
 

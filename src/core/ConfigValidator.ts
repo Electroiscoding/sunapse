@@ -49,14 +49,14 @@ export class ConfigValidator {
         this.registerSchema('synapse.model', {
             type: 'string',
             required: true,
-            pattern: '^[a-zA-Z0-9_\-\/\.]+$',
+            pattern: '^[a-zA-Z0-9_/.\\-]+$',
             default: 'anthropic/claude-3.5-sonnet'
         });
 
         this.registerSchema('synapse.apiKey', {
             type: 'string',
             required: false,
-            pattern: '^[a-zA-Z0-9_\-]{10,}$',
+            pattern: '^[a-zA-Z0-9\\_-]{10,}$',
             validate: (value) => {
                 if (!value || value.length < 10) {
                     return { valid: false, message: 'API key appears too short (min 10 chars)' };
@@ -171,7 +171,7 @@ export class ConfigValidator {
      */
     validateValue(key: string, value: any): { valid: boolean; message?: string } {
         const schema = this.schemas.get(key);
-        
+
         if (!schema) {
             return { valid: true }; // Unknown keys pass through
         }
@@ -189,17 +189,17 @@ export class ConfigValidator {
         // Type validation
         const actualType = Array.isArray(value) ? 'array' : typeof value;
         if (actualType !== schema.type) {
-            return { 
-                valid: false, 
-                message: `Expected type '${schema.type}' but got '${actualType}'` 
+            return {
+                valid: false,
+                message: `Expected type '${schema.type}' but got '${actualType}'`
             };
         }
 
         // Enum validation
         if (schema.enum && !schema.enum.includes(value)) {
-            return { 
-                valid: false, 
-                message: `Value must be one of: ${schema.enum.join(', ')}` 
+            return {
+                valid: false,
+                message: `Value must be one of: ${schema.enum.join(', ')}`
             };
         }
 
@@ -207,9 +207,9 @@ export class ConfigValidator {
         if (schema.pattern && typeof value === 'string') {
             const regex = new RegExp(schema.pattern);
             if (!regex.test(value)) {
-                return { 
-                    valid: false, 
-                    message: `Value does not match required pattern: ${schema.pattern}` 
+                return {
+                    valid: false,
+                    message: `Value does not match required pattern: ${schema.pattern}`
                 };
             }
         }

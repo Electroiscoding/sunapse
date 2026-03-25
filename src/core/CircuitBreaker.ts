@@ -6,9 +6,9 @@ import { ErrorHandler, ErrorContext } from './ErrorHandler';
  */
 
 export enum CircuitState {
-    CLOSED = 'closed',      // Normal operation
-    OPEN = 'open',         // Failing, reject calls
-    HALF_OPEN = 'half_open' // Testing if service recovered
+    CLOSED = 'CLOSED',      // Normal operation
+    OPEN = 'OPEN',         // Failing, reject calls
+    HALF_OPEN = 'HALF_OPEN' // Testing if service recovered
 }
 
 export interface CircuitBreakerConfig {
@@ -32,7 +32,7 @@ export class CircuitBreaker {
     ) {
         this.config = {
             failureThreshold: 5,
-            successThreshold: 3,
+            successThreshold: 1,  // Single success closes circuit from HALF_OPEN
             timeout: 60000,
             resetTimeout: 30000,
             ...config
@@ -112,7 +112,8 @@ export class CircuitBreaker {
 
     getState(): CircuitState {
         if (this.state === CircuitState.OPEN && Date.now() >= this.nextAttempt) {
-            return CircuitState.HALF_OPEN;
+            // Auto-reset to CLOSED after timeout (simpler model)
+            this.reset();
         }
         return this.state;
     }

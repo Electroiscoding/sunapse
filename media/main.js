@@ -33,7 +33,6 @@
     }
 
     function setupEventListeners() {
-        // Send message
         btnSend?.addEventListener('click', sendMessage);
         
         messageInput?.addEventListener('keydown', (e) => {
@@ -43,7 +42,6 @@
             }
         });
 
-        // Quick action buttons
         document.querySelectorAll('.quick-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const prompt = btn.getAttribute('data-prompt');
@@ -54,50 +52,33 @@
             });
         });
 
-        // Header buttons
-        btnModel?.addEventListener('click', () => {
-            vscode.postMessage({ type: 'switchModel' });
-        });
-
+        btnModel?.addEventListener('click', () => vscode.postMessage({ type: 'switchModel' }));
         btnIndex?.addEventListener('click', () => {
             showStatus('Indexing codebase...');
             vscode.postMessage({ type: 'indexCodebase' });
         });
-
-        btnCleft?.addEventListener('click', () => {
-            vscode.postMessage({ type: 'startCleft' });
-        });
-
-        btnAttach?.addEventListener('click', () => {
-            vscode.postMessage({ type: 'getCodeContext' });
-        });
+        btnCleft?.addEventListener('click', () => vscode.postMessage({ type: 'startCleft' }));
+        btnAttach?.addEventListener('click', () => vscode.postMessage({ type: 'getCodeContext' }));
 
         agentSelect?.addEventListener('change', (e) => {
-            const value = e.target.value;
-            if (value === 'custom') {
+            if (e.target.value === 'custom') {
                 vscode.postMessage({ type: 'addCustomAgent' });
             }
         });
 
         autoIterateCheckbox?.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                const task = messageInput.value || 'Continue current task autonomously';
-                vscode.postMessage({ 
-                    type: 'startIteration', 
-                    task,
-                    checkpoints: ['initial']
-                });
-                showStatus('24/7 Auto-iteration mode enabled');
-            } else {
-                vscode.postMessage({ type: 'stopIteration' });
-                showStatus('Auto-iteration stopped');
-            }
+            const task = messageInput.value || 'Continue autonomously';
+            vscode.postMessage({
+                type: e.target.checked ? 'startIteration' : 'stopIteration',
+                task,
+                checkpoints: ['initial']
+            });
+            showStatus(e.target.checked ? 'Auto-iteration enabled' : 'Auto-iteration stopped');
         });
     }
 
     function setupInputAutoResize() {
         if (!messageInput) return;
-        
         messageInput.addEventListener('input', () => {
             messageInput.style.height = 'auto';
             messageInput.style.height = Math.min(messageInput.scrollHeight, 200) + 'px';
@@ -108,42 +89,28 @@
         const content = messageInput.value.trim();
         if (!content || isTyping) return;
 
-        // Hide welcome message
-        if (welcomeMessage) {
-            welcomeMessage.style.display = 'none';
-        }
-
-        // Add user message to chat
+        if (welcomeMessage) welcomeMessage.style.display = 'none';
         addMessage('user', content);
-        
-        // Clear input
         messageInput.value = '';
         messageInput.style.height = 'auto';
-
-        // Show typing indicator
         showTypingIndicator();
 
-        // Send to extension
         isTyping = true;
         currentResponse = '';
-        
         vscode.postMessage({
             type: 'sendMessage',
             content,
-            options: {
-                agent: agentSelect?.value || 'auto'
-            }
+            options: { agent: agentSelect?.value || 'auto' }
         });
     }
 
     function addMessage(role, content, actions = []) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${role}-message`;
-        
+        const div = document.createElement('div');
+        div.className = `message ${role}-message`;
         const avatar = role === 'user' ? '👤' : '⚡';
         const name = role === 'user' ? 'You' : 'Synapse';
         
-        messageDiv.innerHTML = `
+        div.innerHTML = `
             <div class="message-header">
                 <span class="message-avatar">${avatar}</span>
                 <span>${name}</span>
@@ -158,44 +125,27 @@
                 const btn = document.createElement('button');
                 btn.className = `action-btn ${action.secondary ? 'secondary' : ''}`;
                 btn.textContent = action.label;
-                btn.onclick = () => action.handler();
+                btn.onclick = action.handler;
                 actionsDiv.appendChild(btn);
             });
-            messageDiv.appendChild(actionsDiv);
+            div.appendChild(actionsDiv);
         }
 
-        chatContainer.appendChild(messageDiv);
+        chatContainer.appendChild(div);
         scrollToBottom();
-        
-        return messageDiv;
+        return div;
     }
 
     function formatContent(content) {
-        // Escape HTML
         content = content.replace(/&/g, '&amp;')
                         .replace(/</g, '&lt;')
                         .replace(/>/g, '&gt;');
-        
-        // Format code blocks
-        content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
-            return `<pre><code class="language-${lang || 'text'}">${code.trim()}</code></pre>`;
-        });
-        
-        // Format inline code
+        content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, (m, lang, code) => 
+            `<pre><code class="language-${lang || 'text'}">${code.trim()}</code></pre>`);
         content = content.replace(/`([^`]+)`/g, '<code>$1</code>');
-        
-        // Format bold
         content = content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-        
-        // Format italic
         content = content.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-        
-        // Format links
-        content = content.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-        
-        // Convert newlines to breaks (outside of pre blocks)
         content = content.replace(/\n/g, '<br>');
-        
         return content;
     }
 
@@ -209,10 +159,7 @@
     }
 
     function hideTypingIndicator() {
-        const indicator = document.getElementById('typing-indicator');
-        if (indicator) {
-            indicator.remove();
-        }
+        document.getElementById('typing-indicator')?.remove();
     }
 
     function scrollToBottom() {
@@ -225,7 +172,6 @@
 
     function updateConfig(newConfig) {
         config = newConfig;
-        
         if (modelIndicator) {
             const provider = newConfig.provider || 'openrouter';
             const model = newConfig.model?.split('/').pop() || 'claude';
@@ -238,132 +184,104 @@
         if (statusEl) {
             const original = statusEl.textContent;
             statusEl.textContent = message;
-            setTimeout(() => {
-                statusEl.textContent = original;
-            }, 3000);
+            setTimeout(() => statusEl.textContent = original, 3000);
         }
     }
 
-    function handleSuggestedEdit(edit) {
-        addMessage('ai', `Suggested edit to ${edit.file}`, [
-            {
-                label: '✓ Apply Edit',
-                handler: () => {
-                    vscode.postMessage({
-                        type: 'applyEdit',
-                        filePath: edit.file,
-                        content: edit.content,
-                        range: edit.range
-                    });
-                }
-            },
-            {
-                label: '✕ Dismiss',
-                secondary: true,
-                handler: () => {}
-            }
-        ]);
-    }
-
-    function handleSuggestedCommand(cmd) {
-        addMessage('ai', `Suggested command: \`\`\`\n${cmd}\n\`\`\``, [
-            {
-                label: '▶ Run in Terminal',
-                handler: () => {
-                    vscode.postMessage({
-                        type: 'runTerminal',
-                        command: cmd
-                    });
-                }
-            },
-            {
-                label: '✕ Dismiss',
-                secondary: true,
-                handler: () => {}
-            }
-        ]);
-    }
-
-    // Handle messages from extension
-    window.addEventListener('message', (event) => {
-        const message = event.data;
+    function handleAgentStep(step) {
+        const div = document.createElement('div');
+        div.className = `agent-step ${step.type}-step`;
         
-        switch (message.type) {
+        const icons = {
+            thought: '💭',
+            action: '🔧',
+            observation: '👁️',
+            final: '✅'
+        };
+        const titles = {
+            thought: 'Thinking',
+            action: 'Action',
+            observation: 'Result',
+            final: 'Complete'
+        };
+        
+        let content = step.content;
+        if (step.type === 'action' && step.toolCall) {
+            content = `Using tool: ${step.toolCall.name}`;
+        }
+        
+        div.innerHTML = `
+            <div class="step-header">
+                <span class="step-icon">${icons[step.type] || '⚡'}</span>
+                <span class="step-title">${titles[step.type] || 'Agent'}</span>
+            </div>
+            <div class="step-content">${formatContent(content)}</div>
+        `;
+        
+        chatContainer.appendChild(div);
+        scrollToBottom();
+    }
+
+    window.addEventListener('message', (event) => {
+        const msg = event.data;
+        switch (msg.type) {
             case 'config':
-                updateConfig(message.config);
+                updateConfig(msg.config);
                 break;
-                
             case 'configUpdated':
-                updateConfig(message.config);
+                updateConfig(msg.config);
                 showStatus('Configuration updated');
                 break;
-                
             case 'responseStart':
                 hideTypingIndicator();
                 currentResponse = '';
                 break;
-                
             case 'responseChunk':
-                currentResponse += message.chunk;
-                // Update the last message or create new one
-                const lastMessage = chatContainer.querySelector('.ai-message:last-child');
-                if (lastMessage && !lastMessage.querySelector('.message-actions')) {
-                    lastMessage.querySelector('.message-content').innerHTML = formatContent(currentResponse);
+                currentResponse += msg.chunk;
+                const lastMsg = chatContainer.querySelector('.ai-message:last-child');
+                if (lastMsg && !lastMsg.querySelector('.message-actions')) {
+                    lastMsg.querySelector('.message-content').innerHTML = formatContent(currentResponse);
                 } else {
                     addMessage('ai', currentResponse);
                 }
                 scrollToBottom();
                 break;
-                
             case 'responseComplete':
                 isTyping = false;
                 hideTypingIndicator();
                 break;
-                
             case 'error':
                 isTyping = false;
                 hideTypingIndicator();
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'error-message';
-                errorDiv.textContent = `Error: ${message.error}`;
-                chatContainer.appendChild(errorDiv);
+                const errDiv = document.createElement('div');
+                errDiv.className = 'error-message';
+                errDiv.textContent = `Error: ${msg.error}`;
+                chatContainer.appendChild(errDiv);
                 scrollToBottom();
                 break;
-                
-            case 'suggestedEdit':
-                handleSuggestedEdit(message.edit);
+            case 'agentStep':
+                handleAgentStep(msg.step);
                 break;
-                
-            case 'suggestedCommand':
-                handleSuggestedCommand(message.cmd);
-                break;
-                
             case 'indexComplete':
                 showStatus('Indexing complete!');
                 break;
-                
             case 'cleftStarted':
                 showStatus('Cleft flow active');
                 break;
-                
             case 'cleftStopped':
                 showStatus('Cleft flow stopped');
                 break;
-                
             case 'editApplied':
-                showStatus(`Edit applied to ${message.filePath}`);
+                showStatus(`Edit applied to ${msg.filePath}`);
                 break;
-                
             case 'terminalExecuted':
                 showStatus('Command executed');
                 break;
-                
             case 'codeContext':
-                if (message.context) {
-                    contextInfo.textContent = message.context.filePath;
+                if (msg.context && contextInfo) {
+                    contextInfo.textContent = msg.context.filePath;
                 }
                 break;
-                
             case 'historyCleared':
                 chatContainer.innerHTML = '';
                 if (welcomeMessage) {
@@ -375,6 +293,5 @@
         }
     });
 
-    // Initialize
     init();
 })();

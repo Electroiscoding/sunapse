@@ -43,10 +43,11 @@ export class ErrorHandler {
                 'EPIPE', 'ENOTFOUND', 'ENETUNREACH',
                 '429', '503', '504'
             ];
-            return retryableErrors.some(code =>
+            const message = error.message.toLowerCase();
+            return (retryableErrors.some(code =>
                 error.message.includes(code) ||
                 (error as any).code === code
-            ) && attempt < 3;
+            ) || message.includes('temporary')) && attempt < 3;
         }
     };
 

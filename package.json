@@ -336,8 +336,10 @@
     "@types/vscode": "^1.80.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
+    "@vscode/test-electron": "^2.5.2",
     "css-loader": "^6.8.1",
     "eslint": "^8.45.0",
+    "mocha": "^11.7.5",
     "style-loader": "^3.3.3",
     "ts-loader": "^9.4.4",
     "typescript": "^5.1.6",
@@ -345,12 +347,12 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "vectra": "^0.4.4",
-    "tiktoken": "^1.0.10",
     "glob": "^10.3.3",
     "minimatch": "^9.0.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tiktoken": "^1.0.10",
+    "vectra": "^0.4.4",
     "zod": "^3.22.4"
   }
 }

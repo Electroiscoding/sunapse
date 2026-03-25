@@ -25,7 +25,7 @@ export class RateLimiter {
         this.config = {
             maxRequests: 60,      // 60 requests
             windowMs: 60 * 1000,  // per minute
-            burstAllowance: 10,   // Allow 10 extra burst
+            burstAllowance: 0,    // No burst by default
             ...config
         };
     }

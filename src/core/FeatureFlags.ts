@@ -190,11 +190,22 @@ export class FeatureFlagManager {
      * Enable/disable feature
      */
     async setEnabled(flagName: string, enabled: boolean): Promise<void> {
-        const flag = this.flags.get(flagName);
-        if (flag) {
+        let flag = this.flags.get(flagName);
+        if (!flag) {
+            // Auto-create flag if it doesn't exist
+            flag = {
+                name: flagName,
+                enabled,
+                rolloutPercentage: 100,
+                allowedUsers: [],
+                blockedUsers: [],
+                dependencies: []
+            };
+            this.flags.set(flagName, flag);
+        } else {
             flag.enabled = enabled;
-            await this.persistFlags();
         }
+        await this.persistFlags();
     }
 
     /**

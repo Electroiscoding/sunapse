@@ -80,9 +80,9 @@ export class AuditLogger {
         /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/, // Email
         /\b\d{3}-\d{2}-\d{4}\b/, // SSN pattern
         /\b(?:\d[ -]*?){13,16}\b/, // Credit card-like
-        /api[_-]?key["']?\s*[:=]\s*["']?[a-zA-Z0-9_-]+/i, // API keys
+        /api[_-]?key["']?\s*[:=]\s*["']?[a-zA-Z0-9_\-]+/i, // API keys
         /password["']?\s*[:=]\s*["']?[^\s"']+/i, // Passwords
-        /token["']?\s*[:=]\s*["']?[a-zA-Z0-9_-]+/i, // Tokens
+        /token["']?\s*[:=]\s*["']?[a-zA-Z0-9_\-]+/i, // Tokens
     ];
 
     constructor(context: vscode.ExtensionContext, config: AuditConfig = {}) {
